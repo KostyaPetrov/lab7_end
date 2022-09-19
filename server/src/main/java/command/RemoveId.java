@@ -59,7 +59,7 @@ public class RemoveId implements Commandable {
 
                 collectionElements = collectionManager.getCollection();
 
-                collectionId = collectionManager.getUniqueId();
+                collectionId = collectionManager.getListUniqueId();
                 //get position element in collection and remove themco
                 if (!collectionId.contains(removeId)) {
                     throw new FieldProductExeption("This element collection does not exist");
@@ -70,7 +70,7 @@ public class RemoveId implements Commandable {
                 String login2=databaseManager.getLogin(address);
                 if (login.equals(login2)) {
                     Connection connection = DatabaseManager.getConnectionDataBase();
-                    String selectSQL = "delete from collections where id= ?";
+                    String selectSQL = "delete from collections where \"id\"= ?";
                     PreparedStatement preparedStatement = connection.prepareStatement(selectSQL);
                     preparedStatement.setInt(1, removeId);
                     preparedStatement.executeUpdate();
@@ -83,7 +83,7 @@ public class RemoveId implements Commandable {
 
                     //write new colllection in collection storage
                     collectionManager.setCollection(collectionElements);
-                    collectionManager.setUniqueId(collectionId);
+                    collectionManager.setListUniqueId(collectionId);
                     preparedStatement.close();
 
 

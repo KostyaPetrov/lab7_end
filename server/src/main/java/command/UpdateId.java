@@ -43,7 +43,7 @@ public class UpdateId implements Commandable{
         writeLock.lock();
         readLock.lock();
 
-        ArrayList<Integer> collectionId = collectionManager.getUniqueId();
+        ArrayList<Integer> collectionId = collectionManager.getListUniqueId();
         LinkedList<Product> collectionElements = collectionManager.getCollection();
 
         updateId=commandHandler.getUpdateId(Thread.currentThread().getName());
@@ -65,20 +65,20 @@ public class UpdateId implements Commandable{
                 if (collectionElements.get(updateId).getLogin().equals(login)) {
                     Product product = commandHandler.getProduct(address);
                     Connection connection = DatabaseManager.getConnectionDataBase();
-                    String selectSQL = "update collections set id=?, \"name\"=?, coordinatesX=?, coordinatesY=?, creationDate=?, price=?, partNumber=?, manufactureCost=?, unitOfMesure=?, ownerName=?, ownerBirthday=?, ownerWeight=?";
+                    String selectSQL = "update collections set \"id\"=?, \"name\"=?, coordinatesx=?, coordinatesy=?, creationdate=?, price=?, partnumber=?, manufacturecost=?, unitofmesure=?, ownername=?, ownerbirthday=?, ownerweight=?";
                     PreparedStatement preparedStatement = connection.prepareStatement(selectSQL);
-                    preparedStatement.setString(1, String.valueOf(updateId));
+                    preparedStatement.setInt(1, updateId);
                     preparedStatement.setString(2, product.getName());
-                    preparedStatement.setString(3, String.valueOf(product.getCoordinates().getCoordinateX()));
-                    preparedStatement.setString(4, String.valueOf(product.getCoordinates().getCoordinateY()));
-                    preparedStatement.setString(5, String.valueOf(product.getPrice()));
+                    preparedStatement.setLong(3, product.getCoordinates().getCoordinateX());
+                    preparedStatement.setFloat(4, product.getCoordinates().getCoordinateY());
+                    preparedStatement.setInt(5, product.getPrice());
                     preparedStatement.setString(6, product.getPartNumber());
                     preparedStatement.setString(7, String.valueOf(product.getCreationDate()));
-                    preparedStatement.setString(8, String.valueOf(product.getManufactureCost()));
+                    preparedStatement.setFloat(8, product.getManufactureCost());
                     preparedStatement.setString(9, String.valueOf(product.getUnitOfMeasure()));
                     preparedStatement.setString(10, String.valueOf(product.getOwner().getNamePerson()));
-                    preparedStatement.setString(11, String.valueOf(product.getOwner().getBirthday()));
-                    preparedStatement.setString(12, String.valueOf(product.getOwner().getWeight()));
+                    preparedStatement.setObject(11, product.getOwner().getBirthday());
+                    preparedStatement.setDouble(12, product.getOwner().getWeight());
                     preparedStatement.executeUpdate();
 
                     //find position needed element collection if in collection id elements and replace element new product with old id and creation date, but new else field

@@ -55,7 +55,6 @@ public class CommandHandler {
         readLock.lock();
 
             String inputCommand = objectManager.getCommand();
-
             if (inputCommand.equals("enter") || inputCommand.equals("registration")) {
                 response=new AnswerManager(databaseManager.authorization(inputCommand, objectManager.getLogin(), objectManager.getPassword(),address));
                 readLock.unlock();
@@ -94,7 +93,6 @@ public class CommandHandler {
                     collectionManager.setCommand(arrCommandLine[0], address);
 
 
-                    System.out.println("I am in method unpacker2");
 
                     response=new AnswerManager(commandManager.execCommand(arrCommandLine[0], address));
                     readLock.unlock();
@@ -111,19 +109,19 @@ public class CommandHandler {
         readLock.lock();
 
 
-        if (!collectionManager.getUniqueId().isEmpty()) {
-            listUniqueId.addAll(collectionManager.getUniqueId());
+        if (!collectionManager.getListUniqueId().isEmpty()) {
+            listUniqueId.addAll(collectionManager.getListUniqueId());
         }
         if (listUniqueId.isEmpty()) {
             listUniqueId.add(1);
-            collectionManager.setUniqueId(listUniqueId);
+            collectionManager.setListUniqueId(listUniqueId);
 
             writeLock.unlock();
             readLock.unlock();
             return 1;
         } else {
             listUniqueId.add(Collections.max(listUniqueId) + 1);
-            collectionManager.setUniqueId(listUniqueId);
+            collectionManager.setListUniqueId(listUniqueId);
 
             writeLock.unlock();
             readLock.unlock();

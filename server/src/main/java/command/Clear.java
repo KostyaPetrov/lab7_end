@@ -35,13 +35,13 @@ public class Clear implements Commandable {
         try {
             Connection connection = DatabaseManager.getConnectionDataBase();
             String login = databaseManager.getLogin(address);
-            String selectSQL = "delete from collections where \"userName\"= ?";
+            String selectSQL = "delete from collections where \"username\"= ?";
             PreparedStatement preparedStatement = connection.prepareStatement(selectSQL);
             preparedStatement.setString(1, login);
             preparedStatement.executeUpdate();
 
             LinkedList<Product> listProduct = collectionManager.getCollection();
-            ArrayList<Integer> listId = collectionManager.getUniqueId();
+            ArrayList<Integer> listId = collectionManager.getListUniqueId();
             for (int i = 0; i < listProduct.size(); i++) {
                 if (listProduct.get(i).getLogin().equals(login)) {
                     listProduct.remove(i);
@@ -50,7 +50,7 @@ public class Clear implements Commandable {
             }
 
             collectionManager.setCollection(listProduct);
-            collectionManager.setUniqueId(listId);
+            collectionManager.setListUniqueId(listId);
             preparedStatement.close();
 
 

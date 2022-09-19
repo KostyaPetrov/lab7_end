@@ -99,7 +99,7 @@ public class Client {
      */
     public String resive(ByteBuffer byteBuffer) {
         try {
-            //clientChannel.socket().setSoTimeout(30000000);
+            clientChannel.socket().setSoTimeout(300);
             byte[] bytes = new byte[byteBuffer.limit()];
             DatagramPacket datagramPacket = new DatagramPacket(bytes, bytes.length);
             clientChannel.socket().receive(datagramPacket);

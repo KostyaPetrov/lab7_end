@@ -64,14 +64,34 @@ public class Server extends Thread {
         requestQueue = new ConcurrentLinkedQueue<>();
         responseQueue = new ConcurrentLinkedQueue<>();
 
-        addDataToCollection(databaseManager.readDatabase("select * from collections"));
+        addDataToCollectionElement(databaseManager.readCollectionDatabase("select * from \"collections\""));
+        addDataToCollectionIdUsers(databaseManager.readUserDatabase("select \"id\" from \"authorization\""));
         collectionManager.createInitCollectionDate();
 
         host();
     }
 
-    public void host() throws ConnectionExeption {
+    public void addDataToCollectionIdUsers(ArrayList<String> arrayData){
 
+        ArrayList<Integer> arrayList = new ArrayList<>();
+        if (arrayData != null) {
+            for (int i = 0; i < arrayData.size(); i++) {
+
+
+                arrayList.add(Integer.parseInt(arrayData.get(i)));
+
+
+            }
+        }
+
+        collectionManager.setListIdUser(arrayList);
+
+    }
+
+
+
+
+    public void host() throws ConnectionExeption {
         try {
             if (server != null && server.isOpen()) server.close();
             server = DatagramChannel.open();
@@ -81,11 +101,13 @@ public class Server extends Thread {
             server.register(selector, SelectionKey.OP_READ | SelectionKey.OP_WRITE);
 
         } catch (AlreadyBoundException e) {
+            e.printStackTrace();
             throw new PortAlreadyInUseException();
         } catch (IllegalArgumentException e) {
             e.printStackTrace();
             throw new InvalidPortException();
         } catch (IOException e) {
+            e.printStackTrace();
             throw new ConnectionExeption("something went wrong during server initialization");
         }
     }
@@ -103,11 +125,13 @@ public class Server extends Thread {
             Iterator<SelectionKey> selectedKeys = selector.selectedKeys().iterator();
 
             while (selectedKeys.hasNext()) {
-                SelectionKey key = selectedKeys.next();
 
+                SelectionKey key = selectedKeys.next();
+                selectedKeys.remove();
                 if (!key.isValid()) {
                     continue;
                 }
+
 //                if(key.isConnectable()){
 //                    System.out.println("Connected");
 //                    continue;
@@ -120,26 +144,35 @@ public class Server extends Thread {
 //                System.out.println(key.isConnectable());
 //                System.out.println("#######################################################");
                 if (key.isReadable()) {
+
                     receiverThreadPool.submit(new Receiver());
+
                     continue;
                 }
+
                 if (key.isWritable() && responseQueue.size() > 0) {
                     senderThread.submit(new Sender(responseQueue.poll()));
                 }
-                selectedKeys.remove();
+
             }
+
             if (requestQueue.size() > 0) {
                 requestHandlerThreadPool.submit(new Request(requestQueue.poll()));
-            }
-            Scanner scanner = new Scanner(System.in);
 
+            }
+
+            Scanner scanner = new Scanner(System.in);
             try {
                 if (System.in.available() > 0) {
                     String str = scanner.next();
-
                     if (str.equals("exit")) {
                         running = false;
+                        receiverThreadPool.shutdown();
+                        requestHandlerThreadPool.shutdown();
+                        senderThread.shutdown();
                         databaseManager.closeConnection();
+                        server.close();
+                        scanner.close();
                     }
                 }
             } catch (IOException e) {
@@ -292,7 +325,7 @@ public class Server extends Thread {
         public void run() {
             try {
                 send(address, response);
-                System.out.println("Response to the client "+databaseManager.getLogin(address)+":"+response+"\n\n");
+                System.out.println("Response to the client " + databaseManager.getLogin(address) + ":" + response + "\n\n");
             } catch (ConnectionExeption e) {
                 e.printStackTrace();
             }
@@ -330,13 +363,12 @@ public class Server extends Thread {
                 e.printStackTrace();
             }
         }
+
     }
 
 
     private void handleRequest(InetSocketAddress address, ObjectManager request) throws SQLException {
-
         responseQueue.offer(new AbstractMap.SimpleEntry<>(address, commandHandler.unpacker(request, commandManager, address)));
-
     }
 
 
@@ -364,7 +396,7 @@ public class Server extends Thread {
     /**
      * Add data from database to collect element
      */
-    public void addDataToCollection(ArrayList<String> arrayData) {
+    public void addDataToCollectionElement(ArrayList<String> arrayData) {
         LinkedList<Product> collectionElement = new LinkedList<>();
         ArrayList<Integer> arrayList = new ArrayList<>();
         if (arrayData != null) {
@@ -382,7 +414,7 @@ public class Server extends Thread {
             }
         }
         collectionManager.setCollection(collectionElement);
-        collectionManager.setUniqueId(arrayList);
+        collectionManager.setListUniqueId(arrayList);
     }
 
     public LocalDateTime parserBirthdayTime(String data) {

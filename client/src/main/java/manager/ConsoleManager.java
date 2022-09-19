@@ -11,6 +11,9 @@ import exeption.FieldProductExeption;
 import exeption.IncorrectCommandExeption;
 import exeption.RecursiveScriptExeption;
 
+import javax.xml.bind.DatatypeConverter;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -480,6 +483,20 @@ public class ConsoleManager {
         }
     }
 
+    /**
+     * Method for hashing password with algorithm MD5
+     * @param password user's password for authorization in database
+     * @return hashed password as string
+     * @throws NoSuchAlgorithmException Something exeption. Intellegent Idea say that needed
+     */
+    public String hashingPassword(String password) throws NoSuchAlgorithmException {
+        MessageDigest md = MessageDigest.getInstance("MD5");
+        md.update(password.getBytes());
+        byte[] digest = md.digest();
+        String s= DatatypeConverter.printHexBinary(digest).toUpperCase();
+        return s;
+    }
+
     public String getLogin(){
         System.out.println("Enter your login");
         try {
@@ -505,9 +522,13 @@ public class ConsoleManager {
             if (password.equals("")) {
                 throw new CommandExeption("You input invalid password");
             }
-            return password;
+            String hashingPassword=hashingPassword(password);
+            return hashingPassword;
         }catch (CommandExeption e){
             System.err.println(e.getMessage());
+            return getPassword();
+        } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
             return getPassword();
         }
     }

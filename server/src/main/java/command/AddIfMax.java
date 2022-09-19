@@ -8,6 +8,7 @@ import manager.ServerCollectionManager;
 
 import java.net.InetSocketAddress;
 import java.sql.Connection;
+import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -39,22 +40,24 @@ public class AddIfMax implements Commandable {
         readLock.lock();
 
         try {
-            Product newProduct = commandHandler.getProduct(address);
+            Product product = commandHandler.getProduct(address);
             Connection connection = DatabaseManager.getConnectionDataBase();
-            String selectSQL = "insert into collections (name, coordinatesX, coordinatesY, creationDate, price, partNumber, manufactureCost, unitOfMesure, ownerName, ownerBirthday, ownerWeight, userName) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            String selectSQL = "insert into collections (\"id\", \"name\", coordinatesX, coordinatesY, creationDate, price, partNumber, manufactureCost, unitOfMesure, ownerName, ownerBirthday, ownerWeight, userName) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
             PreparedStatement preparedStatement = connection.prepareStatement(selectSQL);
-            preparedStatement.setString(1, newProduct.getName());
-            preparedStatement.setString(2, String.valueOf(newProduct.getCoordinates().getCoordinateX()));
-            preparedStatement.setString(3, String.valueOf(newProduct.getCoordinates().getCoordinateY()));
-            preparedStatement.setString(4, String.valueOf(newProduct.getPrice()));
-            preparedStatement.setString(5, newProduct.getPartNumber());
-            preparedStatement.setString(6, String.valueOf(newProduct.getCreationDate()));
-            preparedStatement.setString(7, String.valueOf(newProduct.getManufactureCost()));
-            preparedStatement.setString(8, String.valueOf(newProduct.getUnitOfMeasure()));
-            preparedStatement.setString(9, String.valueOf(newProduct.getOwner().getNamePerson()));
-            preparedStatement.setString(10, String.valueOf(newProduct.getOwner().getBirthday()));
-            preparedStatement.setString(11, String.valueOf(newProduct.getOwner().getWeight()));
-            preparedStatement.setString(12, newProduct.getLogin());
+
+            preparedStatement.setInt(1, collectionManager.getUniqueId("collections"));
+            preparedStatement.setString(2, product.getName());
+            preparedStatement.setLong(3, product.getCoordinates().getCoordinateX());
+            preparedStatement.setFloat(4, product.getCoordinates().getCoordinateY());
+            preparedStatement.setDate(5, Date.valueOf(product.getCreationDate()));
+            preparedStatement.setInt(6, product.getPrice());
+            preparedStatement.setString(7, product.getPartNumber());
+            preparedStatement.setFloat(8, product.getManufactureCost());
+            preparedStatement.setString(9, product.getUnitOfMeasure().getWord());
+            preparedStatement.setString(10, product.getOwner().getNamePerson());
+            preparedStatement.setObject(11, product.getOwner().getBirthday());
+            preparedStatement.setDouble(12,product.getOwner().getWeight());
+            preparedStatement.setString(13, product.getLogin());
 
 
             LinkedList<Product> collectionElements = collectionManager.getCollection();
@@ -62,9 +65,9 @@ public class AddIfMax implements Commandable {
             for (Product collectionElement : collectionElements) {
                 arrPrice.add(collectionElement.getPrice());
             }
-            if (newProduct.getPrice() > Collections.max(arrPrice)) {
+            if (product.getPrice() > Collections.max(arrPrice)) {
                 preparedStatement.executeUpdate();
-                collectionElements.add(newProduct);
+                collectionElements.add(product);
                 collectionManager.setCollection(collectionElements);
                 preparedStatement.close();
                 return ("Product added");

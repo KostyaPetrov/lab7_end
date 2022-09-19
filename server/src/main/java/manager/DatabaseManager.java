@@ -8,6 +8,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.sql.*;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.locks.Lock;
@@ -18,14 +19,15 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 public class DatabaseManager {
     ServerCollectionManager collectionManager;
     Map<InetSocketAddress,String> mapLogin=new HashMap<>();
+    ArrayList<Integer>listLoginId=new ArrayList<>();
     private static final String JDBC_DRIVER = "org.postgresql.Driver";
     String url;
     String user;
     String password;
     static Connection connection;
-    static final String DB_URL = "jdbc:postgresql://localhost:5432/collection";
-    static final String USER = "kostya";
-    static final String PASS = "12345";
+    static final String DB_URL = "jdbc:postgresql://pg:5432/studs";//jdbc:postgresql://localhost:5432/collection
+    static final String USER = "s339742";//kostya
+    static final String PASS = "eMgmoDoZhCcsWa62";//12345
     private final ReadWriteLock readWriteLock = new ReentrantReadWriteLock();
     private final Lock readLock = readWriteLock.readLock();
     private final Lock writeLock = readWriteLock.writeLock();
@@ -41,7 +43,9 @@ public class DatabaseManager {
         try {
             Class.forName(JDBC_DRIVER);
             connection = DriverManager.getConnection(DB_URL, USER, PASS);
+            create(connection);
             System.out.println("PostgreSQL JDBC Driver successfully connected");
+
         } catch (SQLException e) {
             e.printStackTrace();
             throw new ConnectionDataBaseExeption("Database connection error");
@@ -49,6 +53,58 @@ public class DatabaseManager {
             e.printStackTrace();
             throw new DatabaseExeption("PostgreSQL JDBC Driver is not found. Include it in your library path");
         }
+    }
+
+    public void create(Connection connection) throws SQLException {
+        //language=SQL
+
+        String createUserTableSQL = "CREATE TABLE IF NOT EXISTS \"authorization\"" +
+                "(\"id\" INTEGER PRIMARY KEY, " +
+                "\"username\" CHARACTER VARYING NOT NULL,"+
+                "\"password\" CHARACTER VARYING NOT NULL);";
+
+
+        String createCollectionTableSQL = "CREATE TABLE IF NOT EXISTS \"collections\"" +
+                "(\"id\" INTEGER PRIMARY KEY, " +
+                "\"name\" CHARACTER VARYING, "+
+                "\"coordinatex\" BIGSERIAL, "+
+                "\"coordinatey\" REAL, "+
+                "\"creationdate\" DATE, "+
+                "\"price\" INTEGER, "+
+                "\"partnumber\" CHARACTER VARYING, "+
+                "\"manufacturecost\" REAL, "+
+                "\"unitofmesure\" CHARACTER VARYING, "+
+                "\"ownername\" CHARACTER VARYING, "+
+                "\"ownerbirthday\" timestamp without time zone, "+
+                "\"ownerweight\" DOUBLE PRECISION, "+
+                "\"username\" CHARACTER VARYING);";
+
+
+
+        PreparedStatement preparedStatement = null;
+        try {
+            preparedStatement = connection.prepareStatement(createUserTableSQL);
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        preparedStatement.executeUpdate();
+        System.out.println("Table authorization added");
+        preparedStatement.close();
+
+        PreparedStatement preparedStatement2 = null;
+        try {
+            preparedStatement2 = connection.prepareStatement(createCollectionTableSQL);
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        preparedStatement2.executeUpdate();
+        System.out.println("Table collections added");
+        preparedStatement2.close();
+
+
+
+
     }
 
     public static Connection getConnectionDataBase(){
@@ -64,20 +120,19 @@ public class DatabaseManager {
     }
 
 
+
+
     /**
      * Authorization users in database
      */
     public String authorization(String type, String login, String password, InetSocketAddress address)  {
 
-
         try {
-
             writeLock.lock();
             readLock.lock();
 
             boolean checkerLogin = false;
             boolean checkerEnter = false;
-            String hashPassword = hashingPassword(password);
 
             Statement statement = connection.createStatement();
             /**
@@ -85,13 +140,22 @@ public class DatabaseManager {
              * if user want register new account, search that such a login no longer exists
              */
             if (type.equals("enter")) {
-                ResultSet reset = statement.executeQuery("select \"userName\", \"password\" from \"authorization\"");
+
+                ResultSet reset = statement.executeQuery("select \"id\", \"username\", \"password\" from \"authorization\"");
+                if(reset==null){
+                    reset.close();
+                    statement.close();
+
+
+                    return "This account does not exist. Enter \"registration\" to register a new account ";
+                }
                 while (reset.next()) {
-                    String re=reset.getString(1);
-                    String re2=reset.getString(2);
-                    if (re.equals(login)) {
+                    String id=reset.getString(1);
+                    String databaseLogin=reset.getString(2);
+                    String databasePassword=reset.getString(3);
+                    if (databaseLogin.equals(login)) {
                         checkerLogin = true;
-                        if (re2.equals(hashPassword)) {
+                        if (databasePassword.equals(password)) {
 //                            this.log = login;
                             mapLogin.put(address,login);
                             checkerEnter = true;
@@ -99,27 +163,25 @@ public class DatabaseManager {
                         }
                     }
                 }
+
                 if (checkerEnter) {
                     reset.close();
                     statement.close();
 
-
                     return "You have successfully logged in";
-                } else if (checkerLogin) {
+                } else if (!checkerLogin) {
                     reset.close();
                     statement.close();
-
 
                     return "This account does not exist. Enter \"registration\" to register a new account ";
                 } else {
                     reset.close();
                     statement.close();
 
-
                     return "You entered the wrong password";
                 }
             } else {
-                ResultSet reset = statement.executeQuery("select \"userName\" from \"authorization\"");
+                ResultSet reset = statement.executeQuery("select \"username\" from \"authorization\"");
                 while (reset.next()) {
                     if (reset.getString(1).equals(login)) {
                         checkerLogin = true;
@@ -136,18 +198,24 @@ public class DatabaseManager {
 
                     return "This login already exists";
                 } else {
-                    String selectSQL = "insert into \"authorization\" (\"userName\", \"password\") values (?, ?)";
-                    PreparedStatement preparedStatement = connection.prepareStatement(selectSQL);
-                    preparedStatement.setString(1, login);
-                    preparedStatement.setString(2, hashingPassword(password));
-                    preparedStatement.executeUpdate();
 
+                    String selectSQL = "insert into \"authorization\" (\"id\", \"username\", \"password\") values (?, ?, ?)";
+
+                    PreparedStatement preparedStatement = connection.prepareStatement(selectSQL);
+                    Integer id=collectionManager.getUniqueId("authorization");
+                    preparedStatement.setInt(1, id);
+                    preparedStatement.setString(2, login);
+                    preparedStatement.setString(3, password);
+                    preparedStatement.executeUpdate();
                     preparedStatement.close();
                     reset.close();
                     statement.close();
 
-
-
+                    mapLogin.put(address,login);
+                    listLoginId=collectionManager.getListIdUser();
+                    listLoginId.add(id);
+                    collectionManager.setListIdUser(listLoginId);
+                    listLoginId.clear();
 
                     return "You have successfully logged in";
                 }
@@ -155,15 +223,11 @@ public class DatabaseManager {
 
             }
 
-        }catch (NoSuchAlgorithmException e){
+        } catch (SQLException e) {
 
-
-            return "Password encryption error, please try again";
-        }catch (SQLException e) {
-
-
+            e.printStackTrace();
             return "Error connecting to database";
-        }finally {
+        } finally {
             writeLock.unlock();
             readLock.unlock();
         }
@@ -182,14 +246,37 @@ public class DatabaseManager {
         return mapLogin.get(address);
     }
 
-    /**
-     * Send request to database and get data
-     */
-    public ArrayList<String> readDatabase(String request){
+    public ArrayList<String> readUserDatabase(String request){
         ArrayList<String> dataFromBase = new ArrayList<>();
 
         try {
-            Connection connection = DriverManager.getConnection("jdbc:postgresql://localhost:5432/collection", "kostya", "12345");
+            //Connection connection = DriverManager.getConnection("jdbc:postgresql://localhost:5432/collection", "kostya", "12345");
+            Statement statement=connection.createStatement();
+            ResultSet reset=statement.executeQuery(request);
+
+            while (reset.next()){
+
+                String aaa=reset.getString(1);
+                dataFromBase.add(aaa);
+
+            }
+            reset.close();
+            statement.close();
+            return dataFromBase;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    /**
+     * Send request to database and get data
+     */
+    public ArrayList<String> readCollectionDatabase(String request){
+        ArrayList<String> dataFromBase = new ArrayList<>();
+
+        try {
+            //Connection connection = DriverManager.getConnection("jdbc:postgresql://localhost:5432/collection", "kostya", "12345");
             Statement statement=connection.createStatement();
             ResultSet reset=statement.executeQuery(request);
 
@@ -209,17 +296,5 @@ public class DatabaseManager {
         }
     }
 
-    /**
-     * Method for hashing password with algorithm MD5
-     * @param password user's password for authorization in database
-     * @return hashed password as string
-     * @throws NoSuchAlgorithmException Something exeption. Intellegent Idea say that needed
-     */
-    public String hashingPassword(String password) throws NoSuchAlgorithmException {
-        MessageDigest md = MessageDigest.getInstance("MD5");
-        md.update(password.getBytes());
-        byte[] digest = md.digest();
-        return DatatypeConverter
-                .printHexBinary(digest).toUpperCase();
-    }
+
 }

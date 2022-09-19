@@ -15,11 +15,12 @@ public class MainServer {
 
         int port = 0;
         String strPort = "5000";
-        //String dbHost = "pg";
-        String dbHost = "localhost";
+        String dbHost = "pg";
+     //   String dbHost = "localhost";
         String user = "s339742";
-        String password = "bwt369";
+        String password = "eMgmoDoZhCcsWa62"; //eMgmoDoZhCcsWa62   HYyP-7172
         String url = "jdbc:postgresql://" + dbHost + ":5432/studs";
+//        String url = "jdbc:postgresql://" + dbHost + ":5432/studs";
 
         try {
             if (args.length == 4) {
